@@ -1,19 +1,29 @@
 # Stage 1: Build stage
 FROM maven:3.8.4-openjdk-11-slim AS build-stage
 
+# Work directory
 WORKDIR /app
 
-copy ./pom.xml ./pom.xml
+# Copy pom file to working directory
+COPY pom.xml ./
 
-copy src ./src
+# Download the dependencies needed for the build (cache them in a separate layer)
+RUN mvn dependency:go-offline
 
-run mvn package
+# Copy source files
+COPY src ./src
+
+# Run mvn package
+RUN mvn package
 
 # Stage 2: Production stage
 FROM tomcat:8.5.78-jdk11-openjdk-slim
 
+# Copy build to webapps folder
 COPY --from=build-stage /app/target/*.war /usr/local/tomcat/webapps/
 
-expose 8080
+# Expose port
+EXPOSE 8080
 
+# Start tomcat
 CMD ["catalina.sh", "run"]
